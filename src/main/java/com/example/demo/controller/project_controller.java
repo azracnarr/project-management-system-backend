@@ -1,10 +1,17 @@
 package com.example.demo.controller;
 
+import com.example.demo.service.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import com.example.demo.entity.project;
 import com.example.demo.service.project_service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -64,6 +71,13 @@ public class project_controller {
     }
 
 
+    @GetMapping("/my_project")
+    public ResponseEntity<List<project>> getUserProjects(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        // CustomUserDetails nesnesini direkt kullanabilirsiniz.
+        String username = userDetails.getUsername();
+        List<project> projects = project_service.getProjectsByUsername(username);
+        return ResponseEntity.ok(projects);
+    }
 
 
 }

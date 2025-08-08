@@ -12,7 +12,7 @@ public class project {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer project_id;
 
-    @Column(nullable = false)
+    @Column(unique = true, nullable = false)
     private String name;
 
     @Column(nullable = false)

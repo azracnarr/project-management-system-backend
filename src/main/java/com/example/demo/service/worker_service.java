@@ -24,6 +24,8 @@ public class worker_service {
 
 
 
+
+
     //Tüm çalışanları getir
     public List<worker> allGetWorkers(){
         return worker_repository.findAll();
@@ -36,6 +38,9 @@ public class worker_service {
 
     //Yeni çalışan ekle
     public worker createWorker(worker worker){
+        if (worker_repository.existsByWorkerEmail(worker.getWorker_email())) {
+            throw new RuntimeException("Bu e-mail zaten kayıtlı!");
+        }
         return worker_repository.save(worker);
     }
 
@@ -45,28 +50,30 @@ public class worker_service {
              existingWorker.setName(worker.getName());
              existingWorker.setAge(worker.getAge());
              existingWorker.setGender(worker.getGender());
+             existingWorker.setWorker_email(worker.getWorker_email());
              return worker_repository.save(existingWorker);
          });
 
     }
 
     //Çalışanı sil
-    public boolean deleteWorker(int id,worker worker){
-        return worker_repository.findById(id).map(existingWorker->{
-            worker_repository.delete(existingWorker);
+    public boolean deleteWorker(int id) {
+        // ID'ye sahip bir çalışanın var olup olmadığını kontrol eder.
+        if (worker_repository.existsById(id)) {
+            // Eğer varsa, deleteById metodu ile siler.
+            worker_repository.deleteById(id);
             return true;
-
-        }).orElse(false);
-
-
         }
+        // Eğer yoksa, false döner.
+        return false;
+    }
 
     //Çalışana proje atamak
     public void assignToWorker(int worker_id, int project_id){
         worker worker=worker_repository.findById(worker_id)
-                .orElseThrow(()->new RuntimeException("worker not found"));
+                .orElseThrow(()->new RuntimeException("Çalışan bulunamadı"));
         project project= project_repository.findById(project_id)
-                .orElseThrow(()->new RuntimeException("project not found"));
+                .orElseThrow(()->new RuntimeException("proje bulunamadı"));
 
         worker.setProject(project);
         // Java tarafında iki yönlü ilişkiyi güncelle
@@ -87,6 +94,9 @@ public class worker_service {
 
         worker_repository.save(worker);
     }
+
+
+
 
 
 

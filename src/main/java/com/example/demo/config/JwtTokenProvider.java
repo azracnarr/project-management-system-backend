@@ -4,21 +4,30 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-
+import org.springframework.security.core.GrantedAuthority;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
 public class JwtTokenProvider {
 
     private final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("gizliAnahtarGibiUzunBirMetin1234567890".getBytes());
-    private final long EXPIRATION_TIME = 86400000; // 1 gün
+    private final long EXPIRATION_TIME = 86400000; // 1 hafta
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", userDetails.getAuthorities());
+
+
+        // ✅ Yetkileri sadece String olarak al
+        List<String> roles = userDetails.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList(); // Java 16+ için, daha düşük sürümde .collect(Collectors.toList()) kullan
+
+        claims.put("roles", roles); // ✅ Artık sadece String rol isimleri yer alıyor
 
         return Jwts.builder()
                 .setClaims(claims)        // claim’leri ayarla
@@ -51,4 +60,18 @@ public class JwtTokenProvider {
         }
 
     }
+
+    public SecretKey getSecretKey() {
+        return this.SECRET_KEY;
+    }
+
+    public Claims getClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+
 }

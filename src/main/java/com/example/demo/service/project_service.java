@@ -1,6 +1,8 @@
 package com.example.demo.service;
 import com.example.demo.entity.project;
+import com.example.demo.entity.worker;
 import com.example.demo.repository.project_repository;
+import com.example.demo.repository.worker_repository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,9 @@ public class project_service {
     @Autowired
     private project_repository projectRepository;
 
+    @Autowired
+    private worker_repository workerRepository;
+
     //Tüm projeleri listele
     public List<project> getAllProjects() {
         return projectRepository.findAll();
@@ -23,8 +28,19 @@ public class project_service {
         return projectRepository.findById(id);
     };
 
-    //Yeni proje ekle
+
+
+    // Yeni proje ekle - Unique kontrolü yapıldı
     public project addProject(project project) {
+        // Veritabanında aynı isimde bir proje var mı diye kontrol et
+        Optional<project> existingProject = projectRepository.findByName(project.getName());
+
+        if (existingProject.isPresent()) {
+            // Eğer varsa, bir hata (exception) fırlat
+            throw new IllegalArgumentException("Bu isimde bir proje zaten mevcut.");
+        }
+
+        // Eğer aynı isimde proje yoksa, kaydet ve geri dön
         return projectRepository.save(project);
     }
 
@@ -50,5 +66,10 @@ public class project_service {
         }).orElse(false);
     }
 
+    public List<project> getProjectsByUsername(String username) {
+        // workerRepository'den Optional<worker> döndürmesi bekleniyor
+        Optional<worker> optionalWorker = workerRepository.findWorkerByUsername(username);
+                return projectRepository.findByWorkersContaining(username);
+    }
 
 }

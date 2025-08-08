@@ -21,7 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*") // sadece test için, güvenli değil
+//@CrossOrigin(origins = {"http://localhost:3000", "http://192.168.56.1:3000"})
 public class AuthController {
 
     @Autowired
@@ -38,6 +38,7 @@ public class AuthController {
 
 
     @PostMapping("/login")
+    @CrossOrigin(origins = {"http://localhost:3000", "http://192.168.56.1:3000"})
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -50,7 +51,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("username", userDetails.getUsername());
             response.put("role", userDetails.getAuthorities());
-            response.put("token", token);  // Eksik olan kısım
+            response.put("token", token);
 
             return ResponseEntity.ok(response);
         } catch (BadCredentialsException ex) {
