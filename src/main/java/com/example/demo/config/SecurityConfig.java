@@ -50,6 +50,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())  // Lambda ile disable etmek gerekiyor
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/user/{userId}/assign-role/{roleId}").hasAuthority("PROJE_YONETICISI")
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/project/my_project").hasAuthority("CALISAN")
                         .requestMatchers("/api/project/**", "/api/worker/**").hasAuthority("PROJE_YONETICISI")

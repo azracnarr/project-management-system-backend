@@ -1,6 +1,12 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.ProjectCreateRequest;
+import com.example.demo.entity.worker;
 import com.example.demo.service.CustomUserDetails;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import com.example.demo.entity.project;
@@ -8,12 +14,10 @@ import com.example.demo.service.project_service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,8 +30,9 @@ public class project_controller {
 
     //Tüm projeleri listele
     @GetMapping("/list")
-    public List<project> getAllProject(){
-        return project_service.getAllProjects();
+    public Page<project> getAllProjects(@PageableDefault(size = 5) Pageable pageable) {
+
+        return project_service.getAllProjects(pageable);
     }
 
     //Belirli projeyi getir(id)
@@ -40,11 +45,19 @@ public class project_controller {
 
     }
 
-    //Yeni proje ekle
     @PostMapping("/create")
-    public ResponseEntity<project> createProject(@RequestBody project project){
-        project_service.addProject(project);
-        return ResponseEntity.ok(project);
+    public ResponseEntity<?> createProject( @RequestBody ProjectCreateRequest request) {
+        project newProject = new project();
+        newProject.setName(request.getName());
+        newProject.setDescription(request.getDescription());
+        newProject.setProject_status(request.getProject_status()); // DTO'dan gelen veriyi entity'ye ata
+
+        // Projeyi kaydetmek için ProjectService'i çağırıyoruz.
+        // Servis katmanı hala bir Project entity beklediği için bu şekilde gönderiyoruz.
+        project createdProject = project_service.createProject(newProject);
+
+        // Başarılı yanıt olarak oluşturulan Project entity'sini döndürüyoruz.
+        return ResponseEntity.ok(createdProject);
     }
 
     //Var olan projeyi güncelle
@@ -77,6 +90,10 @@ public class project_controller {
         String username = userDetails.getUsername();
         List<project> projects = project_service.getProjectsByUsername(username);
         return ResponseEntity.ok(projects);
+    }
+    @GetMapping("/all")
+    public List<project> getAllProjectsNonPaginated() {
+        return project_service.getAllProjectsNonPaginated();
     }
 
 

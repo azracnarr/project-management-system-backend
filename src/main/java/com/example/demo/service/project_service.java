@@ -4,8 +4,12 @@ import com.example.demo.entity.worker;
 import com.example.demo.repository.project_repository;
 import com.example.demo.repository.worker_repository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,10 +22,10 @@ public class project_service {
     @Autowired
     private worker_repository workerRepository;
 
-    //Tüm projeleri listele
-    public List<project> getAllProjects() {
-        return projectRepository.findAll();
-    };
+    // Doğru: Repository'nin findAll metodu Pageable nesnesini kabul eder.
+    public Page<project> getAllProjects(Pageable pageable) {
+        return projectRepository.findAll(pageable);
+    }
 
     //İstenilen projeyi getir (id)
     public Optional<project> getProjectById(int id) {
@@ -30,17 +34,18 @@ public class project_service {
 
 
 
-    // Yeni proje ekle - Unique kontrolü yapıldı
-    public project addProject(project project) {
-        // Veritabanında aynı isimde bir proje var mı diye kontrol et
-        Optional<project> existingProject = projectRepository.findByName(project.getName());
-
-        if (existingProject.isPresent()) {
-            // Eğer varsa, bir hata (exception) fırlat
-            throw new IllegalArgumentException("Bu isimde bir proje zaten mevcut.");
+    @Transactional
+    public project createProject(project project) {
+        // İsteğe bağlı: Yeni bir proje kaydedilmeden önce proje adının benzersiz olup olmadığını kontrol edebilirsiniz.
+        // Eğer ProjectRepository'de findByName diye bir metodunuz yoksa bu kontrol satırını kaldırabilirsiniz
+        // veya ProjectRepository'ye eklemeniz gerekir.
+        if (project.getName() != null && projectRepository.findByName(project.getName()).isPresent()) {
+            throw new RuntimeException("Bu proje adı zaten kullanılıyor!");
         }
 
-        // Eğer aynı isimde proje yoksa, kaydet ve geri dön
+        // Project entity'sini veritabanına kaydediyoruz.
+        // projectRepository.save() metodu, JPA/Hibernate tarafından sağlanır ve
+        // Project objesini veritabanına ekler veya günceller (eğer ID'si varsa).
         return projectRepository.save(project);
     }
 
@@ -70,6 +75,11 @@ public class project_service {
         // workerRepository'den Optional<worker> döndürmesi bekleniyor
         Optional<worker> optionalWorker = workerRepository.findWorkerByUsername(username);
                 return projectRepository.findByWorkersContaining(username);
+    }
+
+    // YENİ: Sayfalama olmayan, tüm projeleri getiren metot
+    public List<project> getAllProjectsNonPaginated() {
+        return projectRepository.findAll();
     }
 
 }

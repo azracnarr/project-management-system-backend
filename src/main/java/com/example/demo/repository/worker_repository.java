@@ -8,8 +8,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface worker_repository extends JpaRepository<worker, Integer> {
+
     @Query("SELECT w FROM worker w WHERE w.user.userUsername = :username")
     Optional<worker> findWorkerByUsername(@Param("username") String username);
-    boolean existsByWorkerEmail(String worker_email);
 
+    @Query("SELECT CASE WHEN COUNT(w) > 0 THEN TRUE ELSE FALSE END FROM worker w WHERE w.worker_email = :email")
+    boolean existsByWorker_email(@Param("email") String worker_email);
 }

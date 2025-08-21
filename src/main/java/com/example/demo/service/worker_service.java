@@ -1,14 +1,16 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.User;
 import com.example.demo.entity.project;
-import com.example.demo.entity.role;
 import com.example.demo.entity.worker;
+import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.project_repository;
-import com.example.demo.repository.role_repository;
 import com.example.demo.repository.worker_repository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,90 +19,79 @@ public class worker_service {
 
     @Autowired
     private worker_repository worker_repository;
+
     @Autowired
     private project_repository project_repository;
+
     @Autowired
-    private role_repository role_repository;
+    private UserRepository userRepository;
 
-
-
-
-
-    //Tüm çalışanları getir
-    public List<worker> allGetWorkers(){
-        return worker_repository.findAll();
+    public Page<worker> allGetWorkers(Pageable pageable) {
+        // Repository'nin findAll metodu zaten Pageable nesnesini kabul eder
+        // ve Page<worker> nesnesi döndürür.
+        return worker_repository.findAll(pageable);
     }
 
-    //İstenilen çalışanı getir (id)
-    public Optional<worker> getIdworker(int id){
+    public Optional<worker> getIdworker(int id) {
         return worker_repository.findById(id);
     }
-
-    //Yeni çalışan ekle
-    public worker createWorker(worker worker){
-        if (worker_repository.existsByWorkerEmail(worker.getWorker_email())) {
-            throw new RuntimeException("Bu e-mail zaten kayıtlı!");
+    @Transactional
+    public worker createWorker(worker worker) {
+        if (worker_repository.existsByWorker_email(worker.getWorker_email())) {
+            throw new RuntimeException("Bu e-posta adresi zaten kullanılıyor!");
         }
         return worker_repository.save(worker);
     }
 
-    //Var olan çalışanı güncelle
-    public Optional<worker> updateWorker(int id,worker worker){
-        return worker_repository.findById(id).map(existingWorker->{
-             existingWorker.setName(worker.getName());
-             existingWorker.setAge(worker.getAge());
-             existingWorker.setGender(worker.getGender());
-             existingWorker.setWorker_email(worker.getWorker_email());
-             return worker_repository.save(existingWorker);
-         });
-
+    public Optional<worker> updateWorker(int id, worker updatedWorker) {
+        return worker_repository.findById(id).map(existingWorker -> {
+            if (updatedWorker.getWorker_email() != null &&
+                    !existingWorker.getWorker_email().equals(updatedWorker.getWorker_email())) {
+                if (worker_repository.existsByWorker_email(updatedWorker.getWorker_email())) {
+                    throw new RuntimeException("Bu e-posta adresi zaten kullanılıyor!");
+                }
+            }
+            existingWorker.setName(updatedWorker.getName());
+            existingWorker.setAge(updatedWorker.getAge());
+            existingWorker.setGender(updatedWorker.getGender());
+            existingWorker.setWorker_email(updatedWorker.getWorker_email());
+            return worker_repository.save(existingWorker);
+        });
     }
 
-    //Çalışanı sil
     public boolean deleteWorker(int id) {
-        // ID'ye sahip bir çalışanın var olup olmadığını kontrol eder.
         if (worker_repository.existsById(id)) {
-            // Eğer varsa, deleteById metodu ile siler.
             worker_repository.deleteById(id);
             return true;
         }
-        // Eğer yoksa, false döner.
         return false;
     }
 
-    //Çalışana proje atamak
-    public void assignToWorker(int worker_id, int project_id){
-        worker worker=worker_repository.findById(worker_id)
-                .orElseThrow(()->new RuntimeException("Çalışan bulunamadı"));
-        project project= project_repository.findById(project_id)
-                .orElseThrow(()->new RuntimeException("proje bulunamadı"));
+    @Transactional
+    public void assignProjectToWorker(int workerId, int projectId) {
+        worker foundWorker = worker_repository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Çalışan bulunamadı."));
+        project foundProject = project_repository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Proje bulunamadı."));
 
-        worker.setProject(project);
-        // Java tarafında iki yönlü ilişkiyi güncelle
-        project.getWorkers().add(worker);
-        worker_repository.save(worker);
+        // ⚠️ Bu kontrol, sorunu çözecektir:
+        // Eğer çalışan zaten projeye atanmışsa, işlem yapmadan geri dön.
+        if (foundWorker.getProjects().contains(foundProject)) {
+            // İsteğe bağlı: Frontend'e daha açıklayıcı bir hata mesajı göndermek için bir istisna fırlatılabilir.
+            throw new IllegalArgumentException("Bu çalışan zaten bu projeye atanmış.");
+        }
 
+        foundWorker.getProjects().add(foundProject);
+        // İlişkinin diğer tarafını da güncellemeyi unutmayın.
+        // Ancak burada save işlemi sadece bir taraf için yapıldığından bu da bir sorun kaynağı olabilir.
+        foundProject.getWorkers().add(foundWorker);
+
+        // Yalnızca bir tarafı kaydetmeniz yeterli olmalı.
+        // @Transactional etiketini kullanıyorsanız, Hibernate her iki tarafı da yönetecktir.
+        worker_repository.save(foundWorker);
     }
-
-
-    // Çalışana rol ataması yapmak
-    public void assignToRole(int worker_id, int role_id) {
-        worker worker = worker_repository.findById(worker_id)
-                .orElseThrow(() -> new RuntimeException("worker not found"));
-
-        role role = role_repository.findById(role_id)  // role_repository kullanmalısın
-                .orElseThrow(() -> new RuntimeException("role not found"));
-
-
-        worker_repository.save(worker);
+    // YENİ: Sayfalama olmadan, tüm çalışanları getiren metot
+    public List<worker> getAllWorkersNonPaginated() {
+        return worker_repository.findAll();
     }
-
-
-
-
-
-
 }
-
-
-
